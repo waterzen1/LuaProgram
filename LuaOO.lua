@@ -1,11 +1,11 @@
 
 local _class={}
 
-function Class(super)
+function Class(...)
 	local class_type={}
 	class_type.Construct = false
 	class_type.Destruct = false
-	class_type.super = super
+	class_type.supers = {...}
 
 	local obj_mt = {
 		__index = class_type,
@@ -15,8 +15,9 @@ function Class(super)
 				if c.Destruct then
 					c.Destruct(o)
 				end
-				if c.super then
-					destroy(c.super)
+				for i = #c.supers, 1, -1 do
+					local super = c.supers[i]
+					destroy(super)
 				end
 			end
 			destroy(class_type)
@@ -28,8 +29,8 @@ function Class(super)
 		do
 			local Create
 			Create = function(c, ...)
-				if c.super then
-					Create(c.super, ...)
+				for _, super in ipairs(c.supers) do
+					Create(super, ...)
 				end
 				if c.Construct then
 					c.Construct(obj, ...)
@@ -41,12 +42,16 @@ function Class(super)
 		return obj
 	end
  
-	if super then
+	if class_type.supers then
 		setmetatable(class_type, {__index =
-			function(t, k)
-				local ret = super[k]
-				class_type[k] = ret
-				return ret
+			function(_, k)
+				for _, super in ipairs(class_type.supers) do
+					local ret = super[k]
+					if ret then
+						class_type[k] = ret
+						return ret
+					end
+				end
 			end
 		})
 	end
@@ -59,26 +64,42 @@ Base=Class()
  
 function Base:Construct(x)
 	print("Base Construct")
-	self.x=x
+	self.x = x or 0
 end
 
 function Base:Destruct()
 	print("Base Destruct")
 end
  
-function Base:Print()
-	print("Base Print: ", self.x)
+function Base:PrintX()
+	print("Base PrintX: ", self.x)
 end
  
 function Base:Hello()
 	print("Base hello")
 end
 
+
+Base1=Class()
+ 
+function Base1:Construct(y)
+	print("Base1 Construct")
+	self.y = y or 0
+end
+
+function Base1:Destruct()
+	print("Base1 Destruct")
+end
+ 
+function Base1:PrintY()
+	print("Base1 PrintY: ", self.y)
+end
+
 Test=Class(Base)
  
 function Test:Construct()
 	print("Test Construct")
-	self.y = 0
+	self.z = 0
 end
 
 function Test:Destruct()
@@ -89,7 +110,7 @@ function Test:Hello()
 	print("Test hello")
 end
 
-Test1 = Class(Test)
+Test1 = Class(Test, Base1)
 
 function Test1:Construct()
 	print("Test1 Construct")
@@ -101,17 +122,18 @@ end
 
 
 test=Test.New(1)
-test:Print()
+test:PrintX()
 test:Hello()
 
 test1 = Test1.New(1)
-test1:Print()
+test1:PrintX()
+test1:PrintY()
 test1:Hello()
 
-function Base:Print()
-	print("Base Print2: ", self.x)
+function Base:PrintX()
+	print("Base PrintX2: ", self.x)
 end
 
-Test.Print = nil
-test:Print()
-test1:Print()
+Test.PrintX = nil
+test:PrintX()
+test1:PrintX()
