@@ -82,7 +82,7 @@ end
 
 Base1=Class()
  
-function Base1:Construct(y)
+function Base1:Construct(x, y)
 	print("Base1 Construct")
 	self.y = y or 0
 end
@@ -125,7 +125,7 @@ test=Test.New(1)
 test:PrintX()
 test:Hello()
 
-test1 = Test1.New(1)
+test1 = Test1.New(1, 2)
 test1:PrintX()
 test1:PrintY()
 test1:Hello()
