@@ -7,24 +7,22 @@ function Class(...)
 	class_type.Destruct = false
 	class_type.supers = {...}
 
-	local obj_mt = {
-		__index = class_type,
-		__gc = function(obj)
-			local destroy
-			destroy = function(c)
-				if obj._destructed[c] then return end
-				obj._destructed[c] = true
-				if c.Destruct then
-					c.Destruct(obj)
-				end
-				for i = #c.supers, 1, -1 do
-					local super = c.supers[i]
-					destroy(super)
-				end
+	class_type.__index = class_type
+	class_type.__gc = function(obj)
+		local destroy
+		destroy = function(c)
+			if obj._destructed[c] then return end
+			obj._destructed[c] = true
+			if c.Destruct then
+				c.Destruct(obj)
 			end
-			destroy(class_type)
+			for i = #c.supers, 1, -1 do
+				local super = c.supers[i]
+				destroy(super)
+			end
 		end
-	}
+		destroy(class_type)
+	end
 
 	class_type.New = function(...)
 		local obj = {_constructed = {}, _destructed = {}}
@@ -42,7 +40,7 @@ function Class(...)
 			end
 			Create(class_type, ...)
 		end
-		setmetatable(obj, obj_mt)
+		setmetatable(obj, class_type)
 		return obj
 	end
  
