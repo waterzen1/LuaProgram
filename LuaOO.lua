@@ -9,11 +9,13 @@ function Class(...)
 
 	local obj_mt = {
 		__index = class_type,
-		__gc = function(o)
+		__gc = function(obj)
 			local destroy
 			destroy = function(c)
+				if obj._destructed[c] then return end
+				obj._destructed[c] = true
 				if c.Destruct then
-					c.Destruct(o)
+					c.Destruct(obj)
 				end
 				for i = #c.supers, 1, -1 do
 					local super = c.supers[i]
@@ -25,10 +27,12 @@ function Class(...)
 	}
 
 	class_type.New = function(...)
-		local obj = {}
+		local obj = {_constructed = {}, _destructed = {}}
 		do
 			local Create
 			Create = function(c, ...)
+				if obj._constructed[c] then return end
+				obj._constructed[c] = true
 				for _, super in ipairs(c.supers) do
 					Create(super, ...)
 				end
@@ -95,7 +99,7 @@ function Base1:PrintY()
 	print("Base1 PrintY: ", self.y)
 end
 
-Test=Class(Base)
+Test = Class(Base)
  
 function Test:Construct()
 	print("Test Construct")
@@ -112,12 +116,22 @@ end
 
 Test1 = Class(Test, Base1)
 
-function Test1:Construct()
+function Test1:Construct(...)
 	print("Test1 Construct")
 end
 
 function Test1:Destruct()
 	print("Test1 Destruct")
+end
+
+Test2 = Class(Test, Test1)
+
+function Test2:Construct(...)
+	print("Test2 Construct")
+end
+
+function Test2:Destruct()
+	print("Test2 Destruct")
 end
 
 
@@ -129,6 +143,8 @@ test1 = Test1.New(1, 2)
 test1:PrintX()
 test1:PrintY()
 test1:Hello()
+
+test2 = Test2.New(1, 2, 3)
 
 function Base:PrintX()
 	print("Base PrintX2: ", self.x)
