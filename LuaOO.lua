@@ -1,13 +1,17 @@
 
 local _class={}
 
-function Class(...)
+function Class(name, ...)
+	assert(type(name) == "string", "class name must be a string")
 	local class_type={}
 	class_type.Construct = false
 	class_type.Destruct = false
 	class_type.supers = {...}
-
+	class_type._name = name
 	class_type.__index = class_type
+	class_type.__tostring = function(obj)
+		return "ctype: " .. obj._ctype._name
+	end
 	class_type.__gc = function(obj)
 		local destroy
 		destroy = function(c)
@@ -25,7 +29,7 @@ function Class(...)
 	end
 
 	class_type.New = function(...)
-		local obj = {_constructed = {}, _destructed = {}}
+		local obj = {_ctype = class_type, _constructed = {}, _destructed = {}}
 		do
 			local Create
 			Create = function(c, ...)
@@ -57,12 +61,12 @@ function Class(...)
 			end
 		})
 	end
-	
-	table.insert(_class, class_type)
+
+	_class[class_type] = true
 	return class_type
 end
 
-Base=Class()
+Base = Class("Base")
  
 function Base:Construct(x)
 	print("Base Construct")
@@ -82,7 +86,7 @@ function Base:Hello()
 end
 
 
-Base1=Class()
+Base1=Class("Base1")
  
 function Base1:Construct(x, y)
 	print("Base1 Construct")
@@ -97,7 +101,7 @@ function Base1:PrintY()
 	print("Base1 PrintY: ", self.y)
 end
 
-Test = Class(Base)
+Test = Class("Test", Base)
  
 function Test:Construct()
 	print("Test Construct")
@@ -112,7 +116,7 @@ function Test:Hello()
 	print("Test hello")
 end
 
-Test1 = Class(Test, Base1)
+Test1 = Class("Test1", Test, Base1)
 
 function Test1:Construct(...)
 	print("Test1 Construct")
@@ -122,7 +126,7 @@ function Test1:Destruct()
 	print("Test1 Destruct")
 end
 
-Test2 = Class(Test, Test1)
+Test2 = Class("Test2", Test, Test1)
 
 function Test2:Construct(...)
 	print("Test2 Construct")
@@ -151,3 +155,4 @@ end
 Test.PrintX = nil
 test:PrintX()
 test1:PrintX()
+print(test2)
