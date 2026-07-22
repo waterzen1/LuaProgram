@@ -8,25 +8,31 @@ function Class(name, ...)
 	class_type.Destruct = false
 	class_type.supers = {...}
 	class_type._name = name
-	class_type.__index = class_type
-	class_type.__tostring = function(obj)
-		return "ctype: " .. obj._ctype._name
-	end
-	class_type.__gc = function(obj)
-		local destroy
-		destroy = function(c)
-			if obj._destructed[c] then return end
-			obj._destructed[c] = true
-			if c.Destruct then
-				c.Destruct(obj)
+
+	local vtbl = {}
+	_class[class_type] = vtbl
+
+	local obj_mt = {
+		__index = _class[class_type],
+		__gc = function(obj)
+			local destroy
+			destroy = function(c)
+				if obj._destructed[c] then return end
+				obj._destructed[c] = true
+				if c.Destruct then
+					c.Destruct(obj)
+				end
+				for i = #c.supers, 1, -1 do
+					local super = c.supers[i]
+					destroy(super)
+				end
 			end
-			for i = #c.supers, 1, -1 do
-				local super = c.supers[i]
-				destroy(super)
-			end
-		end
-		destroy(class_type)
-	end
+			destroy(class_type)
+		end,
+		__tostring = function(obj)
+			return "[object] ctype: " .. obj._ctype._name
+		end,
+	}
 
 	class_type.New = function(...)
 		local obj = {_ctype = class_type, _constructed = {}, _destructed = {}}
@@ -44,17 +50,26 @@ function Class(name, ...)
 			end
 			Create(class_type, ...)
 		end
-		setmetatable(obj, class_type)
+		setmetatable(obj, obj_mt)
 		return obj
 	end
- 
+
+	setmetatable(class_type, {
+		__newindex = function(t, k, v)
+			vtbl[k]=v
+		end,
+		__tostring = function(c)
+			return "[class] type: " .. c._name
+		end,
+	})
+
 	if class_type.supers then
-		setmetatable(class_type, {__index =
-			function(_, k)
+		setmetatable(vtbl, {__index =
+			function(t, k)
 				for _, super in ipairs(class_type.supers) do
-					local ret = super[k]
+					local ret = _class[super][k]
 					if ret then
-						class_type[k] = ret
+						vtbl[k] = ret
 						return ret
 					end
 				end
@@ -62,7 +77,6 @@ function Class(name, ...)
 		})
 	end
 
-	_class[class_type] = true
 	return class_type
 end
 
@@ -155,4 +169,6 @@ end
 Test.PrintX = nil
 test:PrintX()
 test1:PrintX()
+
+print(Test)
 print(test2)
