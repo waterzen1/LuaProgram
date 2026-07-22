@@ -126,7 +126,7 @@ function Class(name, ...)
 			end
 		})
 	end
-	-- Construct/Destruct/supers/_name/New对类可见，vtbl对类实例对象可见
+	-- Construct,Destruct,supers,_name,New,DefaultClassMethod/static对类可见，vtbl对类实例对象可见
 	return class_type
 end
 
