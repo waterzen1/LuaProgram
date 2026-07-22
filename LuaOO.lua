@@ -1,17 +1,23 @@
 
+--保存所有类的表，key是类，value是类的虚表，即类的函数
 local _class={}
 
+-- 创建类
+-- name: 类名
+-- ...: 父类
 function Class(name, ...)
 	assert(type(name) == "string", "class name must be a string")
 	local class_type={}
-	class_type.Construct = false
-	class_type.Destruct = false
-	class_type.supers = {...}
-	class_type._name = name
-
+	class_type.Construct = false	--类构造函数
+	class_type.Destruct = false		--类构造函数
+	class_type.supers = {...}		--父类
+	class_type._name = name			--类名
+	-- 类的虚表，用于存储类的函数，里面的函数可以被子类重载或继承
 	local vtbl = {}
 	_class[class_type] = vtbl
-
+	-- 类实例对象的元表
+	-- 元表的__index指向类的虚表，用于查找类的函数，类实例对象可调用的函数在vtbl中
+	-- 元表的__gc用于析构类实例对象，Destruct为析构函数，先析构子类，再析构父类
 	local obj_mt = {
 		__index = _class[class_type],
 		__gc = function(obj)
@@ -33,7 +39,11 @@ function Class(name, ...)
 			return "[object] ctype: " .. obj._ctype._name
 		end,
 	}
-
+	-- 创建类实例对象
+	-- ...: 构造函数参数
+	-- 构造函数会先构造父类，再构造子类
+	-- _ctype: 类类型
+	-- _constructed/_destructed: 构造/析构函数是否被调用标记，key是类，value是是否被调用，防止菱形继承导致父类构造/析构函数被重复调用
 	class_type.New = function(...)
 		local obj = {_ctype = class_type, _constructed = {}, _destructed = {}}
 		do
@@ -53,16 +63,19 @@ function Class(name, ...)
 		setmetatable(obj, obj_mt)
 		return obj
 	end
-
+	-- 类的元表
+	-- 元表的__newindex：每当类定义新函数的时候，将函数保存在类的虚表vtbl中
 	setmetatable(class_type, {
 		__newindex = function(t, k, v)
-			vtbl[k]=v
+			vtbl[k] = v
 		end,
 		__tostring = function(c)
 			return "[class] type: " .. c._name
 		end,
 	})
-
+	-- 类的虚表vtbl的元表
+	-- 元表的__index：用于实现类的继承，当一个函数在类中查找不到的时候，就去父类的虚表中查找
+	-- 如果在父类中查找到函数，就将函数保存在类的虚表vtbl中，下次查找的时候就直接从vtbl中查找，避免每次都要去父类的虚表中查找
 	if class_type.supers then
 		setmetatable(vtbl, {__index =
 			function(t, k)
@@ -76,7 +89,7 @@ function Class(name, ...)
 			end
 		})
 	end
-
+	-- Construct/Destruct/supers/_name/New对类可见，vtbl对类实例对象可见
 	return class_type
 end
 
@@ -100,7 +113,7 @@ function Base:Hello()
 end
 
 
-Base1=Class("Base1")
+Base1 = Class("Base1")
  
 function Base1:Construct(x, y)
 	print("Base1 Construct")
@@ -151,7 +164,7 @@ function Test2:Destruct()
 end
 
 
-test=Test.New(1)
+test = Test.New(1)
 test:PrintX()
 test:Hello()
 
